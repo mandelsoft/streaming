@@ -16,11 +16,11 @@ func main() {
 	c_nontest := chain.AddFilter(c_go, FilterExcludeSuffix("_test.go"))
 	c_sort := chain.AddSort(c_nontest, strings.Compare)
 
-	p := NewPipeline(c_sort)
+	def := streaming.DefinePipeline[string, string](streaming.SourceFactoryFunc[string, string](NewSource), c_sort, nil)
 
-	p.SetDir(".")
+	def = def.WithProcessor(streaming.ProcessorFactoryFunc[string, string, string](NewProcessor))
 
-	result, err := p.Execute(context.Background())
+	result, err := def.Execute(context.Background(), ".")
 	if err != nil {
 		panic(err)
 	}
@@ -48,13 +48,17 @@ func FilterIncludeSuffix(suffix string) chain.Filter[string] {
 ////////////////////////////////////////////////////////////////////////////////
 // Source
 
+func NewSource(cfg string) (streaming.Source[string], error) {
+	return &Source{cfg}, nil
+}
+
 type Source struct {
 	dir string
 }
 
 var _ streaming.Source[string] = (*Source)(nil)
 
-func (s *Source) Source() (iter.Seq[string], error) {
+func (s *Source) Elements() (iter.Seq[string], error) {
 	entries, err := os.ReadDir(s.dir)
 	if err != nil {
 		return nil, err
@@ -68,39 +72,18 @@ func (s *Source) Source() (iter.Seq[string], error) {
 	}, nil
 }
 
-func (s *Source) SetDir(dir string) {
-	s.dir = dir
-}
-
 ////////////////////////////////////////////////////////////////////////////////
 // Final Processor
 
-func Processor() streaming.Processor[string, string] {
-	return func(ctx context.Context, in iter.Seq[string]) string {
+func NewProcessor(cfg string) (streaming.Processor[string, string], error) {
+	return func(ctx context.Context, i iter.Seq[string]) (string, error) {
 		s := ""
-		for v := range in {
+		for e := range i {
 			if s != "" {
 				s += ", "
 			}
-			s += v
+			s += e
 		}
-		return s
-	}
-}
-
-////////////////////////////////////////////////////////////////////////////////
-
-type Pipeline struct {
-	streaming.Pipeline[string, string, *Source, streaming.Sink[string, string]]
-}
-
-func NewPipeline(c chain.Chain[string, string]) *Pipeline {
-	p := streaming.NewPipeline(&Source{}, streaming.NewSink(c, Processor))
-	return &Pipeline{
-		p,
-	}
-}
-
-func (p *Pipeline) SetDir(dir string) {
-	p.Source().SetDir(dir)
+		return s, nil
+	}, nil
 }

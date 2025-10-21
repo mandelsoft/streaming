@@ -136,27 +136,32 @@ and a processing providing a final result from the element stream provided by
 the processing chain.
 
 A `streaming.Sink` describes the final processing, typically an aggregation of the provided elements. It is created with `streaming.NewSink` which takes
-a function (`ProcessorFactory[R,I]`) creating a `Processor[R,I]` able to consume
-then provided elements for inbound elements of type `I` and provides the final result of type `R`.
+a (`ProcessorFactory[R,I]`) creating a `Processor[R,I]` able to consume
+the provided elements for inbound elements of type `I` and provides the final result of type `R`.
 
-A `streaming.Source` is an object able to provide an initial sequence of elements to fed into a `chaim.Chain`. 
+A `streaming.Source` is an object able to provide an initial sequence of elements to fed into a `chaim.Chain`. Multiple instantiations of the iterator
+should provide similar results, which means that executing and iterator should not consume elements not visible by another instance anymore.
 
-Both elements are combined with `streaming.NewPipeline` to a `Pipeline` object,
-which can then be used to execute a pipeline with a `context.Context`.
-The Pipeline object provides a `Source` method to retrieve the correctly typed
-`Source` object. It can be used to call configuration methods to instrument
-the source for creating a desired inbound sequence.
+
+A `Pipeline[C, R, I, O]` describes a complete processing including a source factory (for sources producing inbound elements of type I), a chain and a processor factory (for a processor consuming elements of type O and producing a result of type R) configured by type C. 
+It can then be used to execute the processing for a given config.
+
+A Pipeline might be incomplete if some element is missing, and it may be used to create derived pipelines by setting particular source or processor factories or chains. Thereby, the used and provided types are fixed by the pipeline object.
+
 
 ```go
-        c_go := chain.AddFilter(chain.New[string](), FilterIncludeSuffix(".go"))
-		c_nontest := chain.AddFilter(c_go, FilterExcludeSuffix("_test.go"))
-		c_sort := chain.AddSort(c_nontest, strings.Compare)
+c_go := chain.AddFilter(chain.New[string](), FilterIncludeSuffix(".go"))
+c_nontest := chain.AddFilter(c_go, FilterExcludeSuffix("_test.go"))
+c_sort := chain.AddSort(c_nontest, strings.Compare)
 
-		s := streaming.NewSink[string](c_sort, Processor)
-		p := streaming.NewPipeline(&Source{}, s)
+def := streaming.DefinePipeline[string, string](
+streaming.SourceFactoryFunc[string, string](NewSource),
+c_sort, nil)
 
-		p.Source().SetDir(".") // configure the source
-		Expect(p.Execute(ctx)).To(Equal("pipeline.go, sink.go, source.go"))
+Expect(def.IsComplete()).To(BeFalse())
+def = def.WithProcessor(streaming.ProcessorFactoryFunc[string, string, string](NewProcessor))
+Expect(def.IsComplete()).To(BeTrue())
+Expect(def.Execute(ctx, ".")).To(Equal("pipeline.go, sink.go, source.go"))
 ```
 
 A complete example can be found in [examples/pipeline](examples/pipeline/main.go).

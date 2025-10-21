@@ -14,6 +14,8 @@ import (
 	. "github.com/onsi/gomega"
 )
 
+const RESULT = "pipeline.go, sink.go, source.go"
+
 var _ = Describe("Pipeline", func() {
 	var (
 		ctx  context.Context
@@ -34,22 +36,27 @@ var _ = Describe("Pipeline", func() {
 		c_nontest := chain.AddFilter(c_go, FilterExcludeSuffix("_test.go"))
 		c_sort := chain.AddSort(c_nontest, strings.Compare)
 
-		s := streaming.NewSink[string](c_sort, Processor)
-		p := streaming.NewPipeline(&Source{}, s)
-
-		p.Source().SetDir(".")
-		Expect(p.Execute(ctx)).To(Equal("pipeline.go, sink.go, source.go"))
+		sink := streaming.NewSink[string, string](c_sort, streaming.ProcessorFactoryFunc[string, string, string](NewProcessor))
+		src, err := NewSource(".")
+		Expect(err).To(BeNil())
+		in, err := src.Elements()
+		Expect(err).To(BeNil())
+		Expect(sink.Execute(ctx, ".", in)).To(Equal(RESULT))
 	})
 
-	It("preconfigued type", func() {
+	It("definition", func() {
 		c_go := chain.AddFilter(chain.New[string](), FilterIncludeSuffix(".go"))
 		c_nontest := chain.AddFilter(c_go, FilterExcludeSuffix("_test.go"))
 		c_sort := chain.AddSort(c_nontest, strings.Compare)
 
-		p := NewPipeline(c_sort)
+		def := streaming.DefinePipeline[string, string](
+			streaming.SourceFactoryFunc[string, string](NewSource),
+			c_sort, nil)
 
-		p.SetDir(".")
-		Expect(p.Execute(ctx)).To(Equal("pipeline.go, sink.go, source.go"))
+		Expect(def.IsComplete()).To(BeFalse())
+		def = def.WithProcessor(streaming.ProcessorFactoryFunc[string, string, string](NewProcessor))
+		Expect(def.IsComplete()).To(BeTrue())
+		Expect(def.Execute(ctx, ".")).To(Equal(RESULT))
 	})
 })
 
@@ -61,7 +68,11 @@ type Source struct {
 
 var _ streaming.Source[string] = (*Source)(nil)
 
-func (s *Source) Source() (iter.Seq[string], error) {
+func NewSource(cfg string) (streaming.Source[string], error) {
+	return &Source{cfg}, nil
+}
+
+func (s *Source) Elements() (iter.Seq[string], error) {
 	entries, err := os.ReadDir(s.dir)
 	if err != nil {
 		return nil, err
@@ -75,22 +86,17 @@ func (s *Source) Source() (iter.Seq[string], error) {
 	}, nil
 }
 
-func (s *Source) SetDir(dir string) {
-	s.dir = dir
-}
-
 ////////////////////////////////////////////////////////////////////////////////
 
-type Pipeline struct {
-	streaming.Pipeline[string, string, *Source, streaming.Sink[string, string]]
-}
-
-func NewPipeline(c chain.Chain[string, string]) *Pipeline {
-	return &Pipeline{
-		streaming.NewPipeline(&Source{}, streaming.NewSink(c, Processor)),
-	}
-}
-
-func (p *Pipeline) SetDir(dir string) {
-	p.Source().SetDir(dir)
+func NewProcessor(cfg string) (streaming.Processor[string, string], error) {
+	return func(ctx context.Context, i iter.Seq[string]) (string, error) {
+		s := ""
+		for e := range i {
+			if s != "" {
+				s += ", "
+			}
+			s += e
+		}
+		return s, nil
+	}, nil
 }

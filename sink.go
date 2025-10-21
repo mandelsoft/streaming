@@ -7,24 +7,49 @@ import (
 	"github.com/mandelsoft/streaming/chain"
 )
 
-type Sink[R, I any] interface {
-	Execute(context.Context, iter.Seq[I]) R
+type Void = interface {
+	none()
 }
 
-type Processor[R, O any] func(context.Context, iter.Seq[O]) R
+var None Void = none{}
 
-type ProcessorFactory[R, O any] func() Processor[R, O]
+type none struct{}
 
-type sink[R, I, O any] struct {
+func (n none) none() {}
+
+////////////////////////////////////////////////////////////////////////////////
+
+type Sink[C, R, I any] interface {
+	Execute(ctx context.Context, cfg C, in iter.Seq[I]) (R, error)
+}
+
+type Processor[R, O any] func(context.Context, iter.Seq[O]) (R, error)
+
+type ProcessorFactory[C, R, O any] interface {
+	Processor(cfg C) (Processor[R, O], error)
+}
+
+type ProcessorFactoryFunc[C, R, O any] func(cfg C) (Processor[R, O], error)
+
+func (f ProcessorFactoryFunc[C, R, O]) Processor(cfg C) (Processor[R, O], error) {
+	return f(cfg)
+}
+
+type sink[C, R, I, O any] struct {
 	chain chain.Chain[I, O]
-	p     ProcessorFactory[R, O]
+	f     ProcessorFactory[C, R, O]
 }
 
-func NewSink[R, I, O any](c chain.Chain[I, O], p ProcessorFactory[R, O]) Sink[R, I] {
-	return &sink[R, I, O]{c, p}
+func NewSink[C, R, I, O any](c chain.Chain[I, O], f ProcessorFactory[C, R, O]) Sink[C, R, I] {
+	return &sink[C, R, I, O]{c, f}
 }
 
-func (s *sink[R, I, O]) Execute(ctx context.Context, in iter.Seq[I]) R {
+func (s *sink[C, R, I, O]) Execute(ctx context.Context, cfg C, in iter.Seq[I]) (R, error) {
+	var _nil R
+	p, err := s.f.Processor(cfg)
+	if err != nil {
+		return _nil, err
+	}
 	out := s.chain.Execute(ctx, in)
-	return s.p()(ctx, out)
+	return p(ctx, out)
 }

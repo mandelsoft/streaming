@@ -32,17 +32,21 @@ var _ = Describe("Sink", func() {
 		c := chain.New[string]()
 		c_filter := chain.AddFilter(c, FilterExcludeSuffix(".c"))
 		c_sort := chain.AddSort(c_filter, strings.Compare)
-		p := streaming.NewSink[string](c_sort, Processor)
+		s := streaming.NewSink[streaming.Void, string](
+			c_sort,
+			streaming.ProcessorFactoryFunc[streaming.Void, string, string](ProcessorFactory),
+		)
 
-		result := p.Execute(ctx, iterutils.For("c.go", "b.c", "a.go"))
+		result, err := s.Execute(ctx, nil, iterutils.For("c.go", "b.c", "a.go"))
+		Expect(err).To(BeNil())
 		Expect(result).To(Equal("a.go, c.go"))
 	})
 })
 
 ////////////////////////////////////////////////////////////////////////////////
 
-func Processor() streaming.Processor[string, string] {
-	return func(ctx context.Context, in iter.Seq[string]) string {
+func ProcessorFactory(streaming.Void) (streaming.Processor[string, string], error) {
+	return func(ctx context.Context, in iter.Seq[string]) (string, error) {
 		s := ""
 		for v := range in {
 			if s != "" {
@@ -50,8 +54,8 @@ func Processor() streaming.Processor[string, string] {
 			}
 			s += v
 		}
-		return s
-	}
+		return s, nil
+	}, nil
 }
 
 ////////////////////////////////////////////////////////////////////////////////
