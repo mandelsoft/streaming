@@ -17,15 +17,6 @@ type sortStep struct {
 	compare general.CompareFunc[any]
 }
 
-func newSortStep(compare general.CompareFunc[any], name ...string) *sortStep {
-	s := &sortStep{
-		gatherStep: gatherStep{step: sortId.Step(name...)},
-		compare:    compare,
-	}
-	s.all = s.sort
-	return s
-}
-
 func (s *sortStep) String() string {
 	return fmt.Sprintf("sortStep[%s]", s.name)
 }
@@ -46,6 +37,15 @@ func (s *sortStep) sort(ctx context.Context, in []any) iter.Seq[any] {
 
 var sortId = newDefaultName("Sort")
 
+func SortStep(m CompareFunc, name ...string) Step {
+	s := &sortStep{
+		gatherStep: gatherStep{step: sortId.Step(name...)},
+		compare:    m,
+	}
+	s.all = s.sort
+	return s
+}
+
 func (c *chain) Sort(m CompareFunc, name ...string) Chain {
-	return &chain{c.clean(), newSortStep(m, name...)}
+	return c.Step(SortStep(m, name...))
 }

@@ -6,6 +6,10 @@ import (
 
 type Mapper[I, O any] = internal.GMapper[I, O]
 
+func MappingStep[I, O any](m Mapper[I, O], name ...string) Step[I, O] {
+	return &step[I, I]{internal.MappingStep(ConvertMapper[any, any](m), name...)}
+}
+
 func Mapped[I, O any](m Mapper[I, O], name ...string) Chain[I, O] {
 	return AddMap[O, I, I](nil, m, name...)
 }

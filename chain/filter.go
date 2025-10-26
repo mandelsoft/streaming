@@ -6,6 +6,10 @@ import (
 
 type Filter[I any] internal.GFilter[I]
 
+func FilterStep[I any](m Filter[I], name ...string) Step[I, I] {
+	return &step[I, I]{internal.FilterStep(ConvertFilter[any](m), name...)}
+}
+
 func Filtered[I any](m Filter[I], name ...string) Chain[I, I] {
 	return AddFilter[I, I](nil, m, name...)
 }

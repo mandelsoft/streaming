@@ -21,12 +21,16 @@ type Aggregator[I, O any] = func() Aggregation[I, O]
 
 ////////////////////////////////////////////////////////////////////////////////
 
+func AggregationStep[I, O any](m Aggregator[I, O], name ...string) Step[I, O] {
+	return &step[I, O]{internal.AggregationStep(convertAggregator[any, any](m), name...)}
+}
+
 func Aggregated[I, O any](m Aggregator[I, O], name ...string) Chain[I, O] {
 	return AddAggregation[O, I, I](nil, m, name...)
 }
 
 func AddAggregation[N, I, O any](base Chain[I, O], m Aggregator[O, N], name ...string) Chain[I, N] {
-	c := chainImpl(base).Aggregate(convertAggregator[any, any, O, N](m), name...)
+	c := chainImpl(base).Aggregate(convertAggregator[any, any](m), name...)
 	return convertChain[I, N](c)
 }
 

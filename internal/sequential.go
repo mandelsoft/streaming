@@ -15,12 +15,6 @@ type sequentialStep struct {
 
 var _ Step = (*sequentialStep)(nil)
 
-func newSequentialStep(chain *chain, name ...string) *sequentialStep {
-	s := &sequentialStep{gatherStep{step: sequentialId.Step(name...)}, chain}
-	s.all = s.exec
-	return s
-}
-
 func (s *sequentialStep) String() string {
 	return fmt.Sprintf("sequentialStep[%s]", s.name)
 }
@@ -40,6 +34,12 @@ func (s *sequentialStep) exec(ctx context.Context, in []any) iter.Seq[any] {
 
 var sequentialId = newDefaultName("Sequential")
 
+func SequentialStep(n Chain, name ...string) Step {
+	s := &sequentialStep{gatherStep{step: sequentialId.Step(name...)}, n.impl()}
+	s.all = s.exec
+	return s
+}
+
 func (c *chain) Sequential(n Chain, name ...string) Chain {
-	return &chain{c.clean(), newSequentialStep(n.impl(), name...)}
+	return c.Step(SequentialStep(n, name...))
 }

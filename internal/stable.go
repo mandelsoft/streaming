@@ -34,8 +34,12 @@ func (s *stableStep) parallel(ctx context.Context, f executionFactory) execution
 
 var stableId = newDefaultName("Stable")
 
+func StableStep(n Chain, pool processing.Processing, name ...string) Step {
+	return &stableStep{nestedChain{stableId.Step(name...), n.impl(), pool}}
+}
+
 func (c *chain) Stable(n Chain, pool processing.Processing, name ...string) Chain {
-	return &chain{c.clean(), &stableStep{nestedChain{stableId.Step(name...), n.impl(), pool}}}
+	return c.Step(StableStep(n, pool, name...))
 }
 
 func newStableStepExecutor(step *stableStep) *parallelStepExecutor {

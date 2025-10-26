@@ -1,8 +1,13 @@
 package chain
 
 import (
+	"github.com/mandelsoft/streaming/internal"
 	"github.com/mandelsoft/streaming/processing"
 )
+
+func ParallelStep[I any](p Chain[I, I], pool processing.Processing, name ...string) Step[I, I] {
+	return &step[I, I]{internal.ParallelStep(p.impl(), pool, name...)}
+}
 
 func Parallel[I, O any](n Chain[I, O], pool processing.Processing, name ...string) Chain[I, O] {
 	return AddParallel[O, I, I](nil, n, pool, name...)

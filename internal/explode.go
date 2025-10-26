@@ -38,8 +38,12 @@ func (s *explodeStep) parallel(ctx context.Context, f executionFactory) executio
 
 var explodeId = newDefaultName("Explode")
 
+func ExplodeStep(m Exploder, name ...string) Step {
+	return &explodeStep{explodeId.Step(name...), m}
+}
+
 func (c *chain) Explode(m Exploder, name ...string) Chain {
-	return &chain{c.clean(), &explodeStep{explodeId.Step(name...), m}}
+	return c.Step(ExplodeStep(m, name...))
 }
 
 ////////////////////////////////////////////////////////////////////////////////

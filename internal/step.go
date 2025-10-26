@@ -24,3 +24,9 @@ func (s *step) GetName() string {
 func (s *step) GetKey() string {
 	return s.key
 }
+
+////////////////////////////////////////////////////////////////////////////////
+
+func (c *chain) Step(step Step) Chain {
+	return &chain{c.clean(), step}
+}

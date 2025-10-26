@@ -38,8 +38,12 @@ func (s *filterStep) parallel(ctx context.Context, f executionFactory) execution
 
 var filterId = newDefaultName("Filter")
 
+func FilterStep(m Filter, name ...string) Step {
+	return &filterStep{filterId.Step(name...), m}
+}
+
 func (c *chain) Filter(m Filter, name ...string) Chain {
-	return &chain{c.clean(), &filterStep{filterId.Step(name...), m}}
+	return c.Step(FilterStep(m, name...))
 }
 
 ////////////////////////////////////////////////////////////////////////////////

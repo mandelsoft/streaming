@@ -62,8 +62,12 @@ func (s *aggregateStep) parallel(ctx context.Context, f executionFactory) execut
 
 var aggregateId = newDefaultName("Aggregate")
 
+func AggregationStep(m Aggregator, name ...string) Step {
+	return &aggregateStep{aggregateId.Step(name...), m}
+}
+
 func (c *chain) Aggregate(m Aggregator, name ...string) Chain {
-	return &chain{c.clean(), &aggregateStep{aggregateId.Step(name...), m}}
+	return c.Step(AggregationStep(m, name...))
 }
 
 ////////////////////////////////////////////////////////////////////////////////

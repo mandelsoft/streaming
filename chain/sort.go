@@ -2,9 +2,14 @@ package chain
 
 import (
 	"github.com/mandelsoft/goutils/general"
+	"github.com/mandelsoft/streaming/internal"
 )
 
 type CompareFunc[I any] = func(a, b I) int
+
+func SortStep[I any](m CompareFunc[I], name ...string) Step[I, I] {
+	return &step[I, I]{internal.SortStep(ConvertCompareFunc[any](m), name...)}
+}
 
 func Sorted[I any](m CompareFunc[I], name ...string) Chain[I, I] {
 	return AddSort[I, I](nil, m, name...)

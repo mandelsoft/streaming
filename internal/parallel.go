@@ -34,8 +34,12 @@ func (s *parallelStep) parallel(ctx context.Context, f executionFactory) executi
 
 var parallelId = newDefaultName("Parallel")
 
+func ParallelStep(n Chain, pool processing.Processing, name ...string) Step {
+	return &parallelStep{nestedChain{parallelId.Step(name...), n.impl(), pool}}
+}
+
 func (c *chain) Parallel(n Chain, pool processing.Processing, name ...string) Chain {
-	return &chain{c.clean(), &parallelStep{nestedChain{parallelId.Step(name...), n.impl(), pool}}}
+	return c.Step(ParallelStep(n, pool, name...))
 }
 
 ////////////////////////////////////////////////////////////////////////////////

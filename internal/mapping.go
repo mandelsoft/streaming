@@ -38,8 +38,12 @@ func (s *mappingStep) parallel(ctx context.Context, f executionFactory) executio
 
 var mapId = newDefaultName("Mapping")
 
+func MappingStep(m Mapper, name ...string) Step {
+	return &mappingStep{mapId.Step(name...), m}
+}
+
 func (c *chain) Map(m Mapper, name ...string) Chain {
-	return &chain{c.clean(), &mappingStep{mapId.Step(), m}}
+	return c.Step(MappingStep(m, name...))
 }
 
 ////////////////////////////////////////////////////////////////////////////////

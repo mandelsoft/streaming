@@ -41,6 +41,10 @@ func (s *conditionalStep) parallel(ctx context.Context, factory executionFactory
 
 var conditionalId = newDefaultName("Conditional")
 
+func ConditionalStep(m Condition, n Chain, name ...string) Step {
+	return &conditionalStep{conditionalId.Step(name...), m, n.impl()}
+}
+
 func (c *chain) Conditional(m Condition, n Chain, name ...string) Chain {
-	return &chain{c.clean(), &conditionalStep{conditionalId.Step(name...), m, n.impl()}}
+	return c.Step(ConditionalStep(m, n, name...))
 }

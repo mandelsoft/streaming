@@ -6,6 +6,10 @@ import (
 
 type Condition = internal.Condition
 
+func ConditionalStep[I any](m Condition, n Chain[I, I], name ...string) Step[I, I] {
+	return &step[I, I]{internal.ConditionalStep(m, n.impl(), name...)}
+}
+
 func ConditionalChain[I any](m Condition, n Chain[I, I], name ...string) Chain[I, I] {
 	return AddConditional[I, I](nil, m, n, name...)
 }

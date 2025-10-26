@@ -7,6 +7,10 @@ import (
 
 type Exploder[I, O any] internal.GExploder[I, O]
 
+func ExplodeStep[I, O any](m Exploder[I, O], name ...string) Step[I, O] {
+	return &step[I, I]{internal.ExplodeStep(ConvertExploder[any, any](m), name...)}
+}
+
 func Exploded[I, O any](m Exploder[I, O], name ...string) Chain[I, O] {
 	return AddExplode[O, I, I](nil, m, name...)
 }
