@@ -1,4 +1,4 @@
-package chain
+package internal
 
 import (
 	"context"

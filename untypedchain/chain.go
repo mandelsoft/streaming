@@ -2,23 +2,24 @@ package untypedchain
 
 import (
 	"context"
-	"github.com/mandelsoft/goutils/iterutils"
-	"github.com/mandelsoft/streaming/chain"
-	"github.com/mandelsoft/streaming/processing"
 	"iter"
+
+	"github.com/mandelsoft/goutils/iterutils"
+	"github.com/mandelsoft/streaming/internal"
+	"github.com/mandelsoft/streaming/processing"
 )
 
-type Mapper = chain.Mapper[any, any]
-type Exploder = chain.Exploder[any, any]
-type Filter = chain.Filter[any]
-type Aggregator = chain.Aggregator[any, any]
-type CompareFunc = chain.CompareFunc[any]
-type Condition = chain.Condition
+type Mapper = internal.Mapper
+type Exploder = internal.Exploder
+type Filter = internal.Filter
+type Aggregator = internal.Aggregator
+type CompareFunc = internal.CompareFunc
+type Condition = internal.Condition
 
-type Chain = chain.Untyped
+type Chain = internal.Chain
 
 func New() Chain {
-	return chain.NewUntyped()
+	return internal.New()
 }
 
 func Mapped(f Mapper, name ...string) Chain {
@@ -63,14 +64,14 @@ type Executor[T any] struct {
 	seq iter.Seq[T]
 }
 
-func (e *Executor[T]) Execute(ctx context.Context, c chain.Chain[any, any]) iter.Seq[any] {
+func (e *Executor[T]) Execute(ctx context.Context, c Chain) iter.Seq[any] {
 	return c.Execute(ctx, iterutils.Convert[any](e.seq))
 }
 
-func (e *Executor[T]) ExecuteWithConfig(ctx context.Context, cfg any, c chain.Chain[any, any]) iter.Seq[any] {
+func (e *Executor[T]) ExecuteWithConfig(ctx context.Context, cfg any, c Chain) iter.Seq[any] {
 	return c.ExecuteWithConfig(ctx, cfg, iterutils.Convert[any](e.seq))
 }
 
 func WithConfig(ctx context.Context, cfg any) context.Context {
-	return chain.WithConfig(ctx, cfg)
+	return internal.WithConfig(ctx, cfg)
 }

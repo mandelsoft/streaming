@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/mandelsoft/goutils/iterutils"
 	"github.com/mandelsoft/streaming/chain"
+	"github.com/mandelsoft/streaming/internal"
 	"github.com/mandelsoft/streaming/processing"
 	"github.com/mandelsoft/streaming/simplepool"
 	. "github.com/onsi/ginkgo/v2"
@@ -80,7 +81,7 @@ type CondConfig struct {
 }
 
 func Condition(ctx context.Context) bool {
-	cfg := chain.GetConfig[*CondConfig](ctx)
+	cfg := internal.GetConfig[*CondConfig](ctx)
 	if cfg == nil || cfg.state {
 		return true
 	}

@@ -1,4 +1,4 @@
-package chain
+package internal
 
 import (
 	"context"
@@ -11,7 +11,7 @@ import (
 
 type gatherStep struct {
 	step
-	single Mapper[any, any]
+	single Mapper
 	all    func(context.Context, []any) iter.Seq[any]
 }
 
@@ -95,4 +95,47 @@ func (r *gatherStepRequest) Execute(ctx context.Context) {
 		i++
 	}
 	r.factory.consume.requestExecution(ctx, elem.NewPropagationElement(i))
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
+type gatherFactory struct {
+	pool          processing.Processing
+	resultChannel processing.Channel
+	result        elem.Elements
+
+	lock sync.Mutex
+}
+
+var _ executionFactory = (*gatherFactory)(nil)
+
+func newGatherFactory(pool processing.Processing, result processing.Channel) executionFactory {
+	return _newGatherFactory(pool, result)
+}
+
+func _newGatherFactory(pool processing.Processing, result processing.Channel) *gatherFactory {
+	return &gatherFactory{pool: pool, resultChannel: result, result: elem.NewElements()}
+}
+
+func (g *gatherFactory) getPool() processing.Processing {
+	return g.pool
+}
+
+func (g *gatherFactory) requestExecution(ctx context.Context, v *elem.Element) {
+	g.lock.Lock()
+	defer g.lock.Unlock()
+
+	//fmt.Printf("gather: %s\n", v)
+	g.result.Add(v)
+	g.resultChannel.Send(ctx, v)
+	if g.result.IsComplete() {
+		//fmt.Printf("complete -> close\n")
+		g.resultChannel.Close()
+	} else {
+		//fmt.Printf("not complete\n")
+	}
+}
+
+func (g *gatherFactory) results() processing.Channel {
+	return g.resultChannel
 }

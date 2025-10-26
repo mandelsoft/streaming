@@ -1,9 +1,12 @@
-package chain
+package internal
 
-import "context"
+import (
+	"context"
+)
 
 type Step interface {
 	String() string
+	GetName() string
 	Renamed(name string) Step
 	sequential(ctx context.Context) executor
 	parallel(ctx context.Context, factory executionFactory) executionFactory

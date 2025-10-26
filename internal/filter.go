@@ -1,0 +1,97 @@
+package internal
+
+import (
+	"context"
+	"fmt"
+	"github.com/mandelsoft/streaming/elem"
+	"github.com/mandelsoft/streaming/processing"
+	"iter"
+)
+
+type GFilter[I any] func(I) bool
+type Filter = GFilter[any]
+
+type filterStep struct {
+	step
+	filter Filter
+}
+
+func (s *filterStep) String() string {
+	return fmt.Sprintf("filterStep[%s]", s.name)
+}
+
+func (s *filterStep) Renamed(name string) Step {
+	n := *s
+	n.name = name
+	return &n
+}
+
+func (s *filterStep) sequential(context.Context) executor {
+	return &filterStepExecutor{s}
+}
+
+func (s *filterStep) parallel(ctx context.Context, f executionFactory) executionFactory {
+	return &filterFactory{s, f}
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
+var filterId = newDefaultName("Filter")
+
+func (c *chain) Filter(m Filter, name ...string) Chain {
+	return &chain{c.clean(), &filterStep{filterId.Step(name...), m}}
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
+type filterStepExecutor struct {
+	step *filterStep
+}
+
+var _ executor = (*filterStepExecutor)(nil)
+
+func (m *filterStepExecutor) Run(ctx context.Context, seq iter.Seq[any]) iter.Seq[any] {
+	return func(yield func(any) bool) {
+		for v := range seq {
+			ok := m.step.filter(v)
+			if ok && !yield(v) {
+				return
+			}
+		}
+	}
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
+type filterFactory struct {
+	step    *filterStep
+	consume executionFactory
+}
+
+var _ executionFactory = (*filterFactory)(nil)
+
+func (f *filterFactory) getPool() processing.Processing {
+	return f.consume.getPool()
+}
+
+func (f *filterFactory) requestExecution(ctx context.Context, v *elem.Element) {
+	f.consume.getPool().Execute(&filterRequest{v, f}, f.step.name)
+}
+
+type filterRequest struct {
+	value   *elem.Element
+	factory *filterFactory
+}
+
+var _ processing.Request = (*filterRequest)(nil)
+
+func (r *filterRequest) Execute(ctx context.Context) {
+	v := r.value.V()
+	if r.value.IsValid() {
+		if !r.factory.step.filter(v) {
+			r.value.SetInvalid()
+		}
+	}
+
+	r.factory.consume.requestExecution(ctx, r.value)
+}
