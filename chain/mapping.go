@@ -25,11 +25,11 @@ func (s *mappingStep) Renamed(name string) Step {
 	return &n
 }
 
-func (s *mappingStep) sequential() executor {
+func (s *mappingStep) sequential(context.Context) executor {
 	return &mappingStepExecutor{s}
 }
 
-func (s *mappingStep) parallel(f executionFactory) executionFactory {
+func (s *mappingStep) parallel(ctx context.Context, f executionFactory) executionFactory {
 	return &mappingFactory{s, f}
 }
 
@@ -41,8 +41,12 @@ func (c *chain) Map(m Mapper[any, any], name ...string) Untyped {
 	return mapWith(c, m, name...)
 }
 
+func MapChain[I, O any](m Mapper[I, O], name ...string) Chain[I, O] {
+	return AddMap[O, I, I](nil, m, name...)
+}
+
 func AddMap[N, I, O any](base Chain[I, O], m Mapper[O, N], name ...string) Chain[I, N] {
-	c := mapWith(base.impl(), ConvertMapper[any, any](m), name...)
+	c := mapWith(chainImpl(base), ConvertMapper[any, any](m), name...)
 	return convertChain[I, N](c)
 }
 

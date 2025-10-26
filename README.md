@@ -14,11 +14,12 @@ There are several step types supported:
 
 The step-specific operation is passed as an argument to the methods defining the step.
 
-Additionally, it is possible to control the execution with
+Additionally, it is possible to control the execution. With
 - *Sequential* chain execution executes a sub chain by processing the elements sequentially
 - *Parallel* chain execution executes a sub-chain in-parallel for the elements. 
   The degree of parallelism is controlled by a processor pool. 
 - *Stable* chain executions does parallel element execution, but finally preserves the order the elements are fed into the chain for upstream processing
+- *Conditional* chain execution a chain is optionally executed based on a `Condition` evaluating the execution context.
 
 The default chain is executed sequentially.
 All those execution modes can be combined, a parallel step may incorporate sequential steps and vice versa.
@@ -30,6 +31,36 @@ In the last case the added chain will be copied to keep the original chain as it
 > be aware that the content might be available only once (like iterating over
 > a channel).
 
+## Conditionals
+
+A chain can be executed based on some config value with `chain.ExecuteWithConfig`.  The configuration value is bound to the execution context
+and can be retrieved via `chain.GetConfig`
+
+```go
+
+type CondConfig struct {
+    state bool
+}
+
+func Condition(ctx context.Context) bool {
+    cfg := chain.GetConfig[*CondConfig](ctx)
+    if cfg == nil || cfg.state {
+        return true
+    }
+    return false
+}
+
+// and now the pipeline code
+            ...
+            c := chain.New[string]()
+			c_explode := chain.AddExplode(c, ExplodeAppendToString(".go", ".c"))
+
+			cond := chain.AddFilter(chain.New[string](), FilterExcludeSuffix(".c"))
+			c_cond := chain.AddConditional(c_explode, Condition, cond)
+			result := chain.ExecuteWithConfig(ctx, &CondConfig{true}, c_cond, iterutils.For("a", "b", "c"))
+			Expect(result).To(HaveExactElements("a.go", "b.go", "c.go"))
+			...
+```
 ## Typed and Untyped Processing Chains
 
 The library offers a type save chain definition or an untyped one.

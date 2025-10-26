@@ -33,7 +33,7 @@ func (s *sequentialStep) Renamed(name string) Step {
 }
 
 func (s *sequentialStep) exec(ctx context.Context, in []any) iter.Seq[any] {
-	return s.chain.sequential().Run(ctx, iterutils.For(in...))
+	return s.chain.sequential(ctx).Run(ctx, iterutils.For(in...))
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -45,7 +45,7 @@ func (c *chain) Sequential(n Untyped, name ...string) Untyped {
 }
 
 func AddSequential[I, O, N any](base Chain[I, O], p Chain[O, N]) Chain[I, N] {
-	c := sequentialWith(base.impl(), p.impl())
+	c := sequentialWith(chainImpl(base), p.impl())
 	return convertChain[I, N](c)
 }
 

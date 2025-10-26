@@ -15,7 +15,7 @@ type Untyped interface {
 	Sequential(untypedChain Untyped, name ...string) Untyped
 	Parallel(untypedChain Untyped, processing processing.Processing, name ...string) Untyped
 	Stable(untypedChain Untyped, processing processing.Processing, name ...string) Untyped
-
+	Conditional(c Condition, untypedChain Untyped, name ...string) Untyped
 	Add(n Untyped, name ...string) Untyped
 }
 

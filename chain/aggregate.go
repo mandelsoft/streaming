@@ -49,11 +49,11 @@ func (s *aggregateStep) Renamed(name string) Step {
 	return &n
 }
 
-func (s *aggregateStep) sequential() executor {
+func (s *aggregateStep) sequential(context.Context) executor {
 	return &aggregateStepExecutor{s, s.aggregator()}
 }
 
-func (s *aggregateStep) parallel(f executionFactory) executionFactory {
+func (s *aggregateStep) parallel(ctx context.Context, f executionFactory) executionFactory {
 	return &aggregateFactory{name: s.name, key: s.key, aggregator: s.aggregator(), consume: f, input: elem.NewElements()}
 }
 
@@ -65,8 +65,12 @@ func (c *chain) Aggregate(m Aggregator[any, any], name ...string) Untyped {
 	return aggregateWith(c, m, name...)
 }
 
+func AggregationChain[I, O any](m Aggregator[I, O], name ...string) Chain[I, O] {
+	return AddAggregation[O, I, I](nil, m, name...)
+}
+
 func AddAggregation[N, I, O any](base Chain[I, O], m Aggregator[O, N], name ...string) Chain[I, N] {
-	c := aggregateWith(base.impl(), convertAggregator[any, any, O, N](m), name...)
+	c := aggregateWith(chainImpl(base), convertAggregator[any, any, O, N](m), name...)
 	return convertChain[I, N](c)
 }
 

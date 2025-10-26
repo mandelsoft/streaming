@@ -25,11 +25,11 @@ func (s *filterStep) Renamed(name string) Step {
 	return &n
 }
 
-func (s *filterStep) sequential() executor {
+func (s *filterStep) sequential(context.Context) executor {
 	return &filterStepExecutor{s}
 }
 
-func (s *filterStep) parallel(f executionFactory) executionFactory {
+func (s *filterStep) parallel(ctx context.Context, f executionFactory) executionFactory {
 	return &filterFactory{s, f}
 }
 
@@ -41,8 +41,12 @@ func (c *chain) Filter(m Filter[any], name ...string) Untyped {
 	return filterWith(c, m, name...)
 }
 
+func FilterChain[I any](m Filter[I], name ...string) Chain[I, I] {
+	return AddFilter[I, I](nil, m, name...)
+}
+
 func AddFilter[I, O any](base Chain[I, O], m Filter[O], name ...string) Chain[I, O] {
-	c := filterWith(base.impl(), ConvertFilter[any](m), name...)
+	c := filterWith(chainImpl(base), ConvertFilter[any](m), name...)
 	return convertChain[I, O](c)
 }
 

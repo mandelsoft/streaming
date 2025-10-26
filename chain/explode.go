@@ -26,11 +26,11 @@ func (s *explodeStep) Renamed(name string) Step {
 	return &n
 }
 
-func (s *explodeStep) sequential() executor {
+func (s *explodeStep) sequential(context.Context) executor {
 	return &explodeStepExecutor{s}
 }
 
-func (s *explodeStep) parallel(f executionFactory) executionFactory {
+func (s *explodeStep) parallel(ctx context.Context, f executionFactory) executionFactory {
 	return &explodeFactory{s, f}
 }
 
@@ -42,8 +42,12 @@ func (c *chain) Explode(m Exploder[any, any], name ...string) Untyped {
 	return explodeWith(c, m, name...)
 }
 
+func ExplodeChain[I, O any](m Exploder[I, O], name ...string) Chain[I, O] {
+	return AddExplode[O, I, I](nil, m, name...)
+}
+
 func AddExplode[N, I, O any](base Chain[I, O], m Exploder[O, N], name ...string) Chain[I, N] {
-	c := explodeWith(base.impl(), ConvertExploder[any, any](m), name...)
+	c := explodeWith(chainImpl(base), ConvertExploder[any, any](m), name...)
 	return convertChain[I, N](c)
 }
 

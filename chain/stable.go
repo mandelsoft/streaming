@@ -22,12 +22,12 @@ func (s *stableStep) Renamed(name string) Step {
 	return &stableStep{*s.nestedChain.Renamed(name)}
 }
 
-func (p *stableStep) sequential() executor {
+func (p *stableStep) sequential(context.Context) executor {
 	return newStableStepExecutor(p)
 }
 
-func (p *stableStep) parallel(f executionFactory) executionFactory {
-	return p.chain.parallel(f)
+func (p *stableStep) parallel(ctx context.Context, f executionFactory) executionFactory {
+	return p.chain.parallel(ctx, f)
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -39,7 +39,7 @@ func (c *chain) Stable(n Untyped, pool processing.Processing, name ...string) Un
 }
 
 func AddStable[I, O, N any](base Chain[I, O], p Chain[O, N], pool processing.Processing, name ...string) Chain[I, N] {
-	c := stableWith(base.impl(), p.impl(), pool, name...)
+	c := stableWith(chainImpl(base), p.impl(), pool, name...)
 	return convertChain[I, N](c)
 }
 

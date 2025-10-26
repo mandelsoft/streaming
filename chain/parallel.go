@@ -36,12 +36,12 @@ func (s *parallelStep) Renamed(name string) Step {
 	return &parallelStep{*s.nestedChain.Renamed(name)}
 }
 
-func (p *parallelStep) sequential() executor {
+func (p *parallelStep) sequential(context.Context) executor {
 	return newParallelStepExecutor(p)
 }
 
-func (p *parallelStep) parallel(f executionFactory) executionFactory {
-	return p.chain.parallel(f)
+func (p *parallelStep) parallel(ctx context.Context, f executionFactory) executionFactory {
+	return p.chain.parallel(ctx, f)
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -52,8 +52,12 @@ func (c *chain) Parallel(n Untyped, pool processing.Processing, name ...string) 
 	return parallelWith(c, n.impl(), pool, name...)
 }
 
-func AddParallel[I, O, N any](base Chain[I, O], p Chain[O, N], pool processing.Processing, name ...string) Chain[I, N] {
-	c := parallelWith(base.impl(), p.impl(), pool, name...)
+func ParallelChain[I, O any](n Chain[I, O], pool processing.Processing, name ...string) Chain[I, O] {
+	return AddParallel[O, I, I](nil, n, pool, name...)
+}
+
+func AddParallel[N, I, O any](base Chain[I, O], p Chain[O, N], pool processing.Processing, name ...string) Chain[I, N] {
+	c := parallelWith(chainImpl(base), p.impl(), pool, name...)
 	return convertChain[I, N](c)
 }
 
@@ -75,7 +79,7 @@ func newParallelStepExecutor(step *parallelStep) *parallelStepExecutor {
 
 func (e *parallelStepExecutor) Run(ctx context.Context, seq iter.Seq[any]) iter.Seq[any] {
 	i := 0
-	f := e.step.chain.parallel(e.factory(e.step.pool, e.result))
+	f := e.step.chain.parallel(ctx, e.factory(e.step.pool, e.result))
 	for v := range seq {
 		f.requestExecution(ctx, elem.NewElement(elem.NewId(i, 0), v))
 		i++

@@ -8,7 +8,6 @@ import (
 	"sync/atomic"
 
 	"github.com/mandelsoft/goutils/iterutils"
-	"github.com/mandelsoft/streaming/elem"
 	"github.com/mandelsoft/streaming/processing"
 )
 
@@ -16,6 +15,7 @@ type Chain[I, O any] interface {
 	impl() *chain
 
 	Execute(ctx context.Context, seq iter.Seq[I], name ...string) iter.Seq[O]
+	ExecuteWithConfig(ctx context.Context, cfg any, seq iter.Seq[I], name ...string) iter.Seq[O]
 }
 
 type executor interface {
@@ -33,6 +33,13 @@ type chain struct {
 	step  Step
 }
 
+func chainImpl[I, O any](c Chain[I, O]) *chain {
+	if c == nil {
+		return nil
+	}
+	return c.impl()
+}
+
 func (c *chain) String() string {
 	return fmt.Sprintf("chain[%s<-%s]", c.step, c.chain)
 }
@@ -42,24 +49,28 @@ func (c *chain) impl() *chain {
 }
 
 func (c *chain) Execute(ctx context.Context, seq iter.Seq[any], name ...string) iter.Seq[any] {
-	return c.sequential().Run(ctx, iterutils.Convert[any](seq))
+	return c.sequential(ctx).Run(ctx, seq)
+}
+
+func (c *chain) ExecuteWithConfig(ctx context.Context, cfg any, seq iter.Seq[any], name ...string) iter.Seq[any] {
+	return c.sequential(ctx).Run(WithConfig(ctx, cfg), seq)
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 
-func (c *chain) sequential() executor {
+func (c *chain) sequential(ctx context.Context) executor {
 	if c.chain != nil {
-		return &sequentialExecutor{c.chain.sequential(), sequentialStepExecutor{c.step}}
+		return &sequentialExecutor{c.chain.sequential(ctx), sequentialStepExecutor{c.step}}
 	}
-	return &sequentialStepExecutor{c.step}
+	return newSequentialStepExecutor(c.step)
 }
 
-func (c *chain) parallel(f executionFactory) executionFactory {
+func (c *chain) parallel(ctx context.Context, f executionFactory) executionFactory {
 	if c.step != nil {
-		f = c.step.parallel(f)
+		f = c.step.parallel(ctx, f)
 	}
 	if c.chain != nil {
-		f = c.chain.parallel(f)
+		f = c.chain.parallel(ctx, f)
 	}
 	return f
 }
@@ -70,14 +81,17 @@ type sequentialStepExecutor struct {
 	step Step
 }
 
-func newSequentialStepExecutor(s *sequentialStep) executor {
+func newSequentialStepExecutor(s Step) executor {
 	return &sequentialStepExecutor{s}
 }
 
 func (e *sequentialStepExecutor) Run(ctx context.Context, seq iter.Seq[any]) iter.Seq[any] {
 
 	if e.step != nil {
-		return e.step.sequential().Run(nil, seq)
+		exec := e.step.sequential(ctx)
+		if exec != nil {
+			return e.step.sequential(ctx).Run(ctx, seq)
+		}
 	}
 	return seq
 }
@@ -88,50 +102,7 @@ type sequentialExecutor struct {
 }
 
 func (e *sequentialExecutor) Run(ctx context.Context, seq iter.Seq[any]) iter.Seq[any] {
-	return e.step.Run(nil, e.parent.Run(nil, seq))
-}
-
-////////////////////////////////////////////////////////////////////////////////
-
-type sequentialStepExecutionFactory struct {
-	step *sequentialStep
-	f    executionFactory
-}
-
-func (s *sequentialStepExecutionFactory) requestExecution(ctx context.Context, v *elem.Element) {
-	s.f.getPool().Execute(newSequentialStepRequest(s.step.chain, v, s.f))
-}
-
-func (s *sequentialStepExecutionFactory) getPool() processing.Processing {
-	return s.f.getPool()
-}
-
-func newSequentialStepExecutionFactory(s *sequentialStep, f executionFactory) executionFactory {
-	return &sequentialStepExecutionFactory{s, f}
-}
-
-////////////////////////////////////////////////////////////////////////////////
-
-type sequentialStepRequest struct {
-	chain *chain
-	value *elem.Element
-	f     executionFactory
-}
-
-var _ processing.Request = (*sequentialStepRequest)(nil)
-
-func newSequentialStepRequest(chain *chain, value *elem.Element, f executionFactory) *sequentialStepRequest {
-	return &sequentialStepRequest{chain, value, f}
-}
-
-func (s *sequentialStepRequest) Execute(ctx context.Context) {
-	var result []any
-	for v := range s.chain.sequential().Run(ctx, iterutils.SingleValue(s.value.V())) {
-		result = append(result, v)
-	}
-	for i, v := range result {
-		s.f.requestExecution(ctx, elem.NewElement(s.value.Id().Add2(i, len(result)), v))
-	}
+	return e.step.Run(ctx, e.parent.Run(ctx, seq))
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -152,6 +123,9 @@ func (c *convertingChain[I, O]) impl() *chain {
 
 func (c *convertingChain[I, O]) Execute(ctx context.Context, seq iter.Seq[I], name ...string) iter.Seq[O] {
 	return iterutils.Convert[O](c.chain.Execute(ctx, iterutils.Convert[any](seq), name...))
+}
+func (c *convertingChain[I, O]) ExecuteWithConfig(ctx context.Context, cfg any, seq iter.Seq[I], name ...string) iter.Seq[O] {
+	return iterutils.Convert[O](c.chain.ExecuteWithConfig(ctx, cfg, iterutils.Convert[any](seq), name...))
 }
 
 ////////////////////////////////////////////////////////////////////////////////

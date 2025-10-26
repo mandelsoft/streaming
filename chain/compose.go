@@ -9,7 +9,7 @@ func (c *chain) Add(n Untyped, name ...string) Untyped {
 }
 
 func AddChain[N, I, O any](base Chain[I, O], m Chain[O, N], name ...string) Chain[I, N] {
-	c := composeWith(base.impl(), m.impl(), name...)
+	c := composeWith(chainImpl(base), m.impl(), name...)
 	return convertChain[I, N](c)
 }
 

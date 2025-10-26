@@ -52,7 +52,7 @@ func (c *chain) Sort(m CompareFunc[any], name ...string) Untyped {
 
 func AddSort[I, O any](base Chain[I, O], m CompareFunc[O], name ...string) Chain[I, O] {
 	f := general.ConvertCompareFunc[any, O](m)
-	c := sortWith(base.impl(), f, name...)
+	c := sortWith(chainImpl(base), f, name...)
 	return convertChain[I, O](c)
 }
 

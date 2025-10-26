@@ -15,11 +15,11 @@ type gatherStep struct {
 	all    func(context.Context, []any) iter.Seq[any]
 }
 
-func (m *gatherStep) sequential() executor {
+func (m *gatherStep) sequential(context.Context) executor {
 	return &gatherStepExecutor{m}
 }
 
-func (m *gatherStep) parallel(f executionFactory) executionFactory {
+func (m *gatherStep) parallel(ctx context.Context, f executionFactory) executionFactory {
 	return &gatherStepFactory{step: m, consume: f, input: elem.NewElements()}
 }
 
