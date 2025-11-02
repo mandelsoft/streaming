@@ -27,9 +27,8 @@ All those execution modes can be combined, a parallel step may incorporate seque
 Partial chains can be composed to a new chain by including a sequential or parallel step or just by adding a chain definition to the end of another chain.
 In the last case the added chain will be copied to keep the original chain as it is for further usage.
 
-> **Attention:** The processing result can be consumed by an iterator. But
-> be aware that the content might be available only once (like iterating over
-> a channel).
+> **Attention:** The processing result can be consumed by an iterator. Every usage of the iterator
+> executes the complete chain with the elements provided by the given source iterator.
 
 ## Conditionals
 
@@ -170,7 +169,7 @@ A `streaming.Sink` describes the final processing, typically an aggregation of t
 a (`ProcessorFactory[R,I]`) creating a `Processor[R,I]` able to consume
 the provided elements for inbound elements of type `I` and provides the final result of type `R`.
 
-A `streaming.Source` is an object able to provide an initial sequence of elements to fed into a `chaim.Chain`. Multiple instantiations of the iterator
+A `streaming.SourceFactory` is an object able to provide an initial sequence of elements to be fed into a `chain.Chain`. Multiple instantiations of the iterator
 should provide similar results, which means that executing and iterator should not consume elements not visible by another instance anymore.
 
 

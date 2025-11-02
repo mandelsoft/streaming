@@ -3,6 +3,7 @@ package streaming
 import (
 	"context"
 	"github.com/mandelsoft/streaming/chain"
+	"iter"
 )
 
 type Pipeline[C, R, I, O any] interface {
@@ -17,7 +18,7 @@ type Pipeline[C, R, I, O any] interface {
 	GetProcessorFactory() ProcessorFactory[C, R, O]
 
 	Sink() Sink[C, R, I]
-	Source(cfg C) (Source[I], error)
+	Source(cfg C) (iter.Seq[I], error)
 	Processor(cfg C) (Processor[R, O], error)
 
 	Execute(ctx context.Context, cfg C) (R, error)
@@ -55,8 +56,8 @@ func (p *pipeline[C, R, I, O]) Sink() Sink[C, R, I] {
 	return NewSink(p.chain, p.proc)
 }
 
-func (p *pipeline[C, R, I, O]) Source(cfg C) (Source[I], error) {
-	return p.src.Source(cfg)
+func (p *pipeline[C, R, I, O]) Source(cfg C) (iter.Seq[I], error) {
+	return p.src.Elements(cfg)
 }
 
 func (p *pipeline[C, R, I, O]) Processor(cfg C) (Processor[R, O], error) {
@@ -91,10 +92,5 @@ func (p *pipeline[C, R, I, O]) Execute(ctx context.Context, cfg C) (R, error) {
 		return _nil, err
 	}
 	sink := p.Sink()
-
-	src, err := s.Elements()
-	if err != nil {
-		return _nil, err
-	}
-	return sink.Execute(ctx, cfg, src)
+	return sink.Execute(ctx, cfg, s)
 }

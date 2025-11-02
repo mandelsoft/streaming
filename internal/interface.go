@@ -6,17 +6,14 @@ import (
 	"iter"
 )
 
-type Implementation interface {
-	impl() *chain
-}
-
 type Chain interface {
-	Implementation
+	impl() *chain
 
 	Map(Mapper, ...string) Chain
 	Explode(Exploder, ...string) Chain
 	Filter(Filter, ...string) Chain
 	Sort(CompareFunc, ...string) Chain
+	Transform(Transformer, ...string) Chain
 	Aggregate(Aggregator, ...string) Chain
 	Sequential(untypedChain Chain, name ...string) Chain
 	Parallel(untypedChain Chain, processing processing.Processing, name ...string) Chain

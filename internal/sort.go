@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"iter"
-	"slices"
+	"sort"
 
 	"github.com/mandelsoft/goutils/general"
 	"github.com/mandelsoft/goutils/iterutils"
@@ -29,8 +29,27 @@ func (s *sortStep) Renamed(name string) Step {
 }
 
 func (s *sortStep) sort(ctx context.Context, in []any) iter.Seq[any] {
-	slices.SortStableFunc(in, s.compare)
+	sort.Stable(&slice{data: in, cmp: s.compare})
 	return iterutils.For(in...)
+}
+
+type slice struct {
+	data []any
+	cmp  general.CompareFunc[any]
+}
+
+var _ sort.Interface = (*slice)(nil)
+
+func (s *slice) Len() int {
+	return len(s.data)
+}
+
+func (s *slice) Less(i, j int) bool {
+	return s.cmp(s.data[i], s.data[j]) < 0
+}
+
+func (s *slice) Swap(i, j int) {
+	s.data[i], s.data[j] = s.data[j], s.data[i]
 }
 
 ////////////////////////////////////////////////////////////////////////////////

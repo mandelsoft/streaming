@@ -37,9 +37,8 @@ var _ = Describe("Pipeline", func() {
 		c_sort := chain.AddSort(c_nontest, strings.Compare)
 
 		sink := streaming.NewSink[string, string](c_sort, streaming.ProcessorFactoryFunc[string, string, string](NewProcessor))
-		src, err := NewSource(".")
-		Expect(err).To(BeNil())
-		in, err := src.Elements()
+		src := NewSource()
+		in, err := src.Elements(".")
 		Expect(err).To(BeNil())
 		Expect(sink.Execute(ctx, ".", in)).To(Equal(RESULT))
 	})
@@ -50,7 +49,7 @@ var _ = Describe("Pipeline", func() {
 		c_sort := chain.AddSort(c_nontest, strings.Compare)
 
 		def := streaming.DefinePipeline[string, string](
-			streaming.SourceFactoryFunc[string, string](NewSource),
+			NewSource(),
 			c_sort, nil)
 
 		Expect(def.IsComplete()).To(BeFalse())
@@ -63,17 +62,14 @@ var _ = Describe("Pipeline", func() {
 ////////////////////////////////////////////////////////////////////////////////
 
 type Source struct {
-	dir string
 }
 
-var _ streaming.Source[string] = (*Source)(nil)
-
-func NewSource(cfg string) (streaming.Source[string], error) {
-	return &Source{cfg}, nil
+func NewSource() streaming.SourceFactory[string, string] {
+	return &Source{}
 }
 
-func (s *Source) Elements() (iter.Seq[string], error) {
-	entries, err := os.ReadDir(s.dir)
+func (s *Source) Elements(dir string) (iter.Seq[string], error) {
+	entries, err := os.ReadDir(dir)
 	if err != nil {
 		return nil, err
 	}

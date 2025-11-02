@@ -40,7 +40,13 @@ func (c *chain) impl() *chain {
 }
 
 func (c *chain) Execute(ctx context.Context, seq iter.Seq[any], name ...string) iter.Seq[any] {
-	return c.sequential(ctx).Run(ctx, seq)
+	return func(yield func(any) bool) {
+		for e := range c.sequential(ctx).Run(ctx, seq) {
+			if !yield(e) {
+				return
+			}
+		}
+	}
 }
 
 func (c *chain) ExecuteWithConfig(ctx context.Context, cfg any, seq iter.Seq[any], name ...string) iter.Seq[any] {

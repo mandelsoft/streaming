@@ -16,7 +16,7 @@ func main() {
 	c_nontest := chain.AddFilter(c_go, FilterExcludeSuffix("_test.go"))
 	c_sort := chain.AddSort(c_nontest, strings.Compare)
 
-	def := streaming.DefinePipeline[string, string](streaming.SourceFactoryFunc[string, string](NewSource), c_sort, nil)
+	def := streaming.DefinePipeline[string, string](NewSource(), c_sort, nil)
 
 	def = def.WithProcessor(streaming.ProcessorFactoryFunc[string, string, string](NewProcessor))
 
@@ -48,18 +48,17 @@ func FilterIncludeSuffix(suffix string) chain.Filter[string] {
 ////////////////////////////////////////////////////////////////////////////////
 // Source
 
-func NewSource(cfg string) (streaming.Source[string], error) {
-	return &Source{cfg}, nil
+func NewSource() streaming.SourceFactory[string, string] {
+	return &Source{}
 }
 
 type Source struct {
-	dir string
 }
 
-var _ streaming.Source[string] = (*Source)(nil)
+var _ streaming.SourceFactory[string, string] = (*Source)(nil)
 
-func (s *Source) Elements() (iter.Seq[string], error) {
-	entries, err := os.ReadDir(s.dir)
+func (s *Source) Elements(dir string) (iter.Seq[string], error) {
+	entries, err := os.ReadDir(dir)
 	if err != nil {
 		return nil, err
 	}
