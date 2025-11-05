@@ -50,7 +50,14 @@ func (c *chain) Execute(ctx context.Context, seq iter.Seq[any], name ...string) 
 }
 
 func (c *chain) ExecuteWithConfig(ctx context.Context, cfg any, seq iter.Seq[any], name ...string) iter.Seq[any] {
-	return c.sequential(ctx).Run(WithConfig(ctx, cfg), seq)
+	return func(yield func(any) bool) {
+		ctx = WithConfig(ctx, cfg)
+		for e := range c.sequential(ctx).Run(ctx, seq) {
+			if !yield(e) {
+				return
+			}
+		}
+	}
 }
 
 func (c *chain) clean() *chain {
@@ -67,9 +74,9 @@ func (c *chain) clean() *chain {
 
 func (c *chain) sequential(ctx context.Context) executor {
 	if c.chain != nil {
-		return &sequentialExecutor{c.chain.sequential(ctx), sequentialStepExecutor{c.step}}
+		return &sequentialExecutor{c.chain.sequential(ctx), &sequentialStepExecutor{c.step}}
 	}
-	return newSequentialStepExecutor(c.step)
+	return &sequentialStepExecutor{c.step}
 }
 
 func (c *chain) parallel(ctx context.Context, f executionFactory) executionFactory {
@@ -88,16 +95,14 @@ type sequentialStepExecutor struct {
 	step Step
 }
 
-func newSequentialStepExecutor(s Step) executor {
-	return &sequentialStepExecutor{s}
-}
+var _ executor = (*sequentialStepExecutor)(nil)
 
 func (e *sequentialStepExecutor) Run(ctx context.Context, seq iter.Seq[any]) iter.Seq[any] {
 
 	if e.step != nil {
 		exec := e.step.sequential(ctx)
 		if exec != nil {
-			return e.step.sequential(ctx).Run(ctx, seq)
+			return exec.Run(ctx, seq)
 		}
 	}
 	return seq
@@ -105,7 +110,7 @@ func (e *sequentialStepExecutor) Run(ctx context.Context, seq iter.Seq[any]) ite
 
 type sequentialExecutor struct {
 	parent executor
-	step   sequentialStepExecutor
+	step   executor
 }
 
 func (e *sequentialExecutor) Run(ctx context.Context, seq iter.Seq[any]) iter.Seq[any] {

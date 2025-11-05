@@ -2,6 +2,7 @@ package internal_test
 
 import (
 	"context"
+
 	mine "github.com/mandelsoft/streaming/internal"
 	"github.com/mandelsoft/streaming/processing"
 	"github.com/mandelsoft/streaming/simplepool"

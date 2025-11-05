@@ -33,6 +33,14 @@ var _ = Describe("Chain", func() {
 		Expect(result).To(HaveExactElements("a.go", "a.c", "b.go", "b.c", "c.go", "c.c"))
 	})
 
+	It("explode by factory", func() {
+		c := chain.New[string]()
+		c_explode := chain.AddExplodeByFactory(c, chain.ExploderFactoryFor(ExplodeAppendToString(".go", ".c")))
+
+		result := c_explode.Execute(ctx, iterutils.For("a", "b", "c"))
+		Expect(result).To(HaveExactElements("a.go", "a.c", "b.go", "b.c", "c.go", "c.c"))
+	})
+
 	It("explode parallel", func() {
 		c := chain.New[string]()
 		c_explode := chain.AddExplode(c, ExplodeAppendToString(".go", ".c"))

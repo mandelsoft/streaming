@@ -11,9 +11,18 @@ import (
 type GExploder[I, O any] func(I) []O
 type Exploder = GExploder[any, any]
 
+type GExploderFactory[I, O any] func(context.Context) GExploder[I, O]
+type ExploderFactory = GExploderFactory[any, any]
+
+func GExploderFactoryFor[I, O any](e GExploder[I, O]) GExploderFactory[I, O] {
+	return func(ctx context.Context) GExploder[I, O] {
+		return e
+	}
+}
+
 type explodeStep struct {
 	step
-	exploder Exploder
+	exploder ExploderFactory
 }
 
 func (s *explodeStep) String() string {
@@ -31,7 +40,7 @@ func (s *explodeStep) sequential(context.Context) executor {
 }
 
 func (s *explodeStep) parallel(ctx context.Context, f executionFactory) executionFactory {
-	return &explodeFactory{s, f}
+	return &explodeFactory{s, s.exploder(ctx), f}
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -39,11 +48,19 @@ func (s *explodeStep) parallel(ctx context.Context, f executionFactory) executio
 var explodeId = newDefaultName("Explode")
 
 func ExplodeStep(m Exploder, name ...string) Step {
+	return &explodeStep{explodeId.Step(name...), GExploderFactoryFor(m)}
+}
+
+func ExplodeStepByFactory(m ExploderFactory, name ...string) Step {
 	return &explodeStep{explodeId.Step(name...), m}
 }
 
 func (c *chain) Explode(m Exploder, name ...string) Chain {
 	return c.Step(ExplodeStep(m, name...))
+}
+
+func (c *chain) ExplodeByFactory(m ExploderFactory, name ...string) Chain {
+	return c.Step(ExplodeStepByFactory(m, name...))
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -56,8 +73,9 @@ var _ executor = (*explodeStepExecutor)(nil)
 
 func (m *explodeStepExecutor) Run(ctx context.Context, seq iter.Seq[any]) iter.Seq[any] {
 	return func(yield func(any) bool) {
+		exploder := m.step.exploder(ctx)
 		for v := range seq {
-			r := m.step.exploder(v)
+			r := exploder(v)
 			//fmt.Printf("after: %T(%v)\n", s, s)
 			for _, e := range r {
 				if !yield(e) {
@@ -71,8 +89,9 @@ func (m *explodeStepExecutor) Run(ctx context.Context, seq iter.Seq[any]) iter.S
 ////////////////////////////////////////////////////////////////////////////////
 
 type explodeFactory struct {
-	step    *explodeStep
-	consume executionFactory
+	step     *explodeStep
+	exploder Exploder
+	consume  executionFactory
 }
 
 var _ executionFactory = (*explodeFactory)(nil)
@@ -97,7 +116,7 @@ var _ processing.Request = (*explodeRequest)(nil)
 func (r *explodeRequest) Execute(ctx context.Context) {
 	if r.value.IsValid() {
 		v := r.value.V()
-		l := r.factory.step.exploder(v)
+		l := r.factory.exploder(v)
 		switch len(l) {
 		case 0:
 			r.factory.consume.requestExecution(ctx, r.value.NewInvalid())

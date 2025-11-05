@@ -11,6 +11,7 @@ type Chain interface {
 
 	Map(Mapper, ...string) Chain
 	Explode(Exploder, ...string) Chain
+	ExplodeByFactory(ExploderFactory, ...string) Chain
 	Filter(Filter, ...string) Chain
 	Sort(CompareFunc, ...string) Chain
 	Transform(Transformer, ...string) Chain
