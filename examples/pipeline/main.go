@@ -12,12 +12,12 @@ import (
 )
 
 func main() {
-	c_go := chain.AddFilter(chain.New[string](), FilterIncludeSuffix(".go"))
+	// c_go := chain.AddFilter(chain.New[string](), FilterIncludeSuffix(".go"))
+	c_go := chain.Filtered(FilterIncludeSuffix(".go"))
 	c_nontest := chain.AddFilter(c_go, FilterExcludeSuffix("_test.go"))
 	c_sort := chain.AddSort(c_nontest, strings.Compare)
 
 	def := streaming.DefinePipeline[string, string](NewSource(), c_sort, nil)
-
 	def = def.WithProcessor(streaming.ProcessorFactoryFunc[string, string, string](NewProcessor))
 
 	result, err := def.Execute(context.Background(), ".")

@@ -3,7 +3,7 @@ module github.com/mandelsoft/streaming
 go 1.25.0
 
 require (
-	github.com/mandelsoft/goutils v0.0.0-20251102201303-2dad79a134aa
+	github.com/mandelsoft/goutils v0.0.0-20251119213939-8b151b4e6ff4
 	github.com/mandelsoft/jobscheduler v0.0.0-20251015204948-3bcb1a39f12e
 	github.com/mandelsoft/logging v0.0.0-20240618075559-fdca28a87b0a
 	github.com/onsi/ginkgo/v2 v2.26.0

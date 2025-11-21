@@ -40,6 +40,8 @@ github.com/mandelsoft/goutils v0.0.0-20251015200054-99c822455c28 h1:3JRDHdpGT4Tl
 github.com/mandelsoft/goutils v0.0.0-20251015200054-99c822455c28/go.mod h1:iwF9yFoDbDR8qWHhRIRCI+pPsHtp9dmdPRVEAjJkRbc=
 github.com/mandelsoft/goutils v0.0.0-20251102201303-2dad79a134aa h1:h/e/9iGXC8y0XXtkx/jxlDpsgHNQa9VaFo2T//Bb//I=
 github.com/mandelsoft/goutils v0.0.0-20251102201303-2dad79a134aa/go.mod h1:fTCyGFCMm+ugUn1FqcHeWelCjoSYtkJaqnJvSmgkx1M=
+github.com/mandelsoft/goutils v0.0.0-20251119213939-8b151b4e6ff4 h1:JNSGpbk+N898NBWlnCfgrccdnDWLSNm9X5CE3jyzFMc=
+github.com/mandelsoft/goutils v0.0.0-20251119213939-8b151b4e6ff4/go.mod h1:fTCyGFCMm+ugUn1FqcHeWelCjoSYtkJaqnJvSmgkx1M=
 github.com/mandelsoft/jobscheduler v0.0.0-20251015204948-3bcb1a39f12e h1:T0VaKqDiSIP+tVnDwvO4nxJWAM/93/WVaLGUEu6KHf8=
 github.com/mandelsoft/jobscheduler v0.0.0-20251015204948-3bcb1a39f12e/go.mod h1:46VlsOt0zjHGQf2484N7AIMdBtP5cDCDNEwTOBvJhmk=
 github.com/mandelsoft/logging v0.0.0-20240618075559-fdca28a87b0a h1:MAvh0gbP2uwKmf7wWCkYCzrYa6vPjBvYeGhoUlVHwtI=

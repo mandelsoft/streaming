@@ -2,6 +2,8 @@ package streaming
 
 import (
 	"context"
+	"fmt"
+	"github.com/mandelsoft/goutils/generics"
 	"iter"
 
 	"github.com/mandelsoft/streaming/chain"
@@ -20,6 +22,8 @@ func (n none) none() {}
 ////////////////////////////////////////////////////////////////////////////////
 
 type Sink[C, R, I any] interface {
+	// Execute executes the sink for the given input sequence
+	// providing the result of type R or an error.
 	Execute(ctx context.Context, cfg C, in iter.Seq[I]) (R, error)
 }
 
@@ -40,16 +44,28 @@ type sink[C, R, I, O any] struct {
 	f     ProcessorFactory[C, R, O]
 }
 
+// NewSink creates a sink using a chain to process an input sequence passed
+// to a processor created with the given ProcessorFactory.
+// If the final sink has no configured processor, the result type R must be
+// iter.Seq[O] and the result is the output iterator of the given chain.
 func NewSink[C, R, I, O any](c chain.Chain[I, O], f ProcessorFactory[C, R, O]) Sink[C, R, I] {
 	return &sink[C, R, I, O]{c, f}
 }
 
 func (s *sink[C, R, I, O]) Execute(ctx context.Context, cfg C, in iter.Seq[I]) (R, error) {
 	var _nil R
-	p, err := s.f.Processor(cfg)
-	if err != nil {
-		return _nil, err
+	if s.f != nil {
+		p, err := s.f.Processor(cfg)
+		if err != nil {
+			return _nil, err
+		}
+		out := s.chain.Execute(ctx, in)
+		return p(ctx, out)
 	}
-	out := s.chain.Execute(ctx, in)
-	return p(ctx, out)
+	if generics.CanAssign[iter.Seq[O], R]() {
+		out := s.chain.Execute(ctx, in)
+		return generics.Cast[R](out), nil
+	} else {
+		return _nil, fmt.Errorf("chain result iterator cannot be assigned to result type %s", generics.TypeOf[R]())
+	}
 }

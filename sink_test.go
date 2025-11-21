@@ -41,6 +41,20 @@ var _ = Describe("Sink", func() {
 		Expect(err).To(BeNil())
 		Expect(result).To(Equal("a.go, c.go"))
 	})
+
+	It("process to iterator", func() {
+		c := chain.New[string]()
+		c_filter := chain.AddFilter(c, FilterExcludeSuffix(".c"))
+		c_sort := chain.AddSort(c_filter, strings.Compare)
+		s := streaming.NewSink[streaming.Void, iter.Seq[string]](
+			c_sort,
+			nil,
+		)
+
+		result, err := s.Execute(ctx, nil, iterutils.For("c.go", "b.c", "a.go"))
+		Expect(err).To(BeNil())
+		Expect(iterutils.Get(result)).To(Equal([]string{"a.go", "c.go"}))
+	})
 })
 
 ////////////////////////////////////////////////////////////////////////////////
